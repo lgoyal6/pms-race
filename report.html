@@ -1,0 +1,210 @@
+<title>PMS agent race harness - results</title>
+<style>body{font-family:ui-monospace,Menlo,monospace;max-width:60rem;margin:2rem auto;padding:0 1rem;line-height:1.5}table{border-collapse:collapse;margin:1rem 0}td,th{border:1px solid #999;padding:2px 8px;text-align:right}td:first-child,th:first-child{text-align:left}</style>
+<h1>RESULTS - concurrency correctness for computer-use agents on a legacy PMS</h1>
+<p>All numbers below were produced on this machine by the harness in `pms-race/`.</p>
+<p>Nothing here is a measurement of, or a claim about, any real product. The system</p>
+<p>under test is `pms-race/server.py`, a mock property management system I wrote.</p>
+<p>**Regenerate everything (about 9 minutes):**</p>
+<p>```</p>
+<p>cd pms-race && ./run.sh</p>
+<p>```</p>
+<h2>What is being measured</h2>
+<p>An agent that drives a screen has no transaction. It GETs a page, spends</p>
+<p>`think_ms` deciding, then POSTs a form. Everything in that window is somebody</p>
+<p>else's turn. The harness makes `think_ms` the independent variable and holds the</p>
+<p>contention pattern fixed:</p>
+<p>- **double_book**: N agents arrive 50 ms apart, all aimed at room 101 on</p>
+<p>  2026-08-20. Whether agent *i* sees agent 0's booking depends only on whether</p>
+<p>  agent 0 has finished thinking.</p>
+<p>- **modify_vs_modify / cancel_vs_modify / stale_read_overwrite**: a second</p>
+<p>  writer acts 100 ms after the first agent starts reading. If the agent's think</p>
+<p>  time is under 100 ms it writes before the contender and nothing is lost.</p>
+<p>Two invariants are checked after every trial, against the server's own</p>
+<p>acknowledgement ledger (the same "an acknowledged write is a promise" framing I</p>
+<p>use in strata's crash harness):</p>
+<p>1. `NO_DOUBLE_BOOK` - at most one active reservation per room-night.</p>
+<p>2. `ACKED_INTENT_DURABILITY` - every field change the server acknowledged is</p>
+<p>   still in the final record, unless a later acknowledged change deliberately</p>
+<p>   targeted that same field. A legacy screen posts the whole record back, so an</p>
+<p>   agent editing the guest name silently reverts every other field on the form.</p>
+<h2>The four write paths</h2>
+<table>
+<tr><th>mode</th><th>write path</th></tr>
+<tr><td>`legacy`</td><td>the screen already answered the availability question, so the form just writes. No re-check, no token. Availability lookup and record write are separate transactions.</td></tr>
+<tr><td>`recheck`</td><td>the server re-checks availability inside one IMMEDIATE transaction. The strongest defense available to a server that does not know which screen the client read.</td></tr>
+<tr><td>`occ`</td><td>optimistic concurrency: every screen carries a version token, every write is conditional on it, a stale token returns 409 and the agent re-reads.</td></tr>
+<tr><td>`lease`</td><td>booking-intent lease with a TTL and a monotonic epoch. Stealing an expired lease bumps the epoch, which fences the previous holder. Same pattern as tautq's epoch-fenced worker leases.</td></tr>
+</table>
+<p>`legacy` models a screen-driven write path with no server-side re-check. That is</p>
+<p>an assumption about how form-driven systems of that generation behave, not a</p>
+<p>measurement of any specific one. If you think your write path re-checks, read</p>
+<p>the `recheck` row instead: it is immune to double-booking and loses 100% of</p>
+<p>concurrent field edits anyway, which is the result that does not depend on the</p>
+<p>assumption.</p>
+<h2>Table 1 - double-bookings per 100 agent bookings</h2>
+<p>6 trials per cell, agents arriving 50 ms apart, one room-night. Lower is better; 0 is the only acceptable value.</p>
+<table>
+<tr><th>mode</th><th>concurrency</th><th>50 ms</th><th>200 ms</th><th>800 ms</th></tr>
+<tr><td>legacy</td><td>2</td><td>16.7</td><td>50.0</td><td>50.0</td></tr>
+<tr><td>legacy</td><td>4</td><td>16.7</td><td>75.0</td><td>75.0</td></tr>
+<tr><td>legacy</td><td>8</td><td>8.3</td><td>45.8</td><td>87.5</td></tr>
+<tr><td>legacy</td><td>16</td><td>2.1</td><td>18.8</td><td>90.6</td></tr>
+<tr><td>recheck</td><td>2</td><td>0.0</td><td>0.0</td><td>0.0</td></tr>
+<tr><td>recheck</td><td>4</td><td>0.0</td><td>0.0</td><td>0.0</td></tr>
+<tr><td>recheck</td><td>8</td><td>0.0</td><td>0.0</td><td>0.0</td></tr>
+<tr><td>recheck</td><td>16</td><td>0.0</td><td>0.0</td><td>0.0</td></tr>
+<tr><td>occ</td><td>2</td><td>0.0</td><td>0.0</td><td>0.0</td></tr>
+<tr><td>occ</td><td>4</td><td>0.0</td><td>0.0</td><td>0.0</td></tr>
+<tr><td>occ</td><td>8</td><td>0.0</td><td>0.0</td><td>0.0</td></tr>
+<tr><td>occ</td><td>16</td><td>0.0</td><td>0.0</td><td>0.0</td></tr>
+<tr><td>lease</td><td>2</td><td>0.0</td><td>0.0</td><td>0.0</td></tr>
+<tr><td>lease</td><td>4</td><td>0.0</td><td>0.0</td><td>0.0</td></tr>
+<tr><td>lease</td><td>8</td><td>0.0</td><td>0.0</td><td>0.0</td></tr>
+<tr><td>lease</td><td>16</td><td>0.0</td><td>0.0</td><td>0.0</td></tr>
+</table>
+<h2>Table 2 - absolute double-bookings (6 trials per cell)</h2>
+<table>
+<tr><th>mode</th><th>concurrency</th><th>50 ms</th><th>200 ms</th><th>800 ms</th></tr>
+<tr><td>legacy</td><td>2</td><td>2</td><td>6</td><td>6</td></tr>
+<tr><td>legacy</td><td>4</td><td>4</td><td>18</td><td>18</td></tr>
+<tr><td>legacy</td><td>8</td><td>4</td><td>22</td><td>42</td></tr>
+<tr><td>legacy</td><td>16</td><td>2</td><td>18</td><td>87</td></tr>
+<tr><td>recheck</td><td>2</td><td>0</td><td>0</td><td>0</td></tr>
+<tr><td>recheck</td><td>4</td><td>0</td><td>0</td><td>0</td></tr>
+<tr><td>recheck</td><td>8</td><td>0</td><td>0</td><td>0</td></tr>
+<tr><td>recheck</td><td>16</td><td>0</td><td>0</td><td>0</td></tr>
+<tr><td>occ</td><td>2</td><td>0</td><td>0</td><td>0</td></tr>
+<tr><td>occ</td><td>4</td><td>0</td><td>0</td><td>0</td></tr>
+<tr><td>occ</td><td>8</td><td>0</td><td>0</td><td>0</td></tr>
+<tr><td>occ</td><td>16</td><td>0</td><td>0</td><td>0</td></tr>
+<tr><td>lease</td><td>2</td><td>0</td><td>0</td><td>0</td></tr>
+<tr><td>lease</td><td>4</td><td>0</td><td>0</td><td>0</td></tr>
+<tr><td>lease</td><td>8</td><td>0</td><td>0</td><td>0</td></tr>
+<tr><td>lease</td><td>16</td><td>0</td><td>0</td><td>0</td></tr>
+</table>
+<h2>Table 3 - p99 overhead per agent, ms</h2>
+<p>Overhead is wall time minus the agent's own think time, so the think constant is removed and only the coordination cost remains.</p>
+<table>
+<tr><th>mode</th><th>concurrency</th><th>50 ms</th><th>200 ms</th><th>800 ms</th></tr>
+<tr><td>legacy</td><td>2</td><td>15.8</td><td>16.0</td><td>15.6</td></tr>
+<tr><td>legacy</td><td>4</td><td>15.0</td><td>17.4</td><td>21.0</td></tr>
+<tr><td>legacy</td><td>8</td><td>20.7</td><td>21.2</td><td>20.2</td></tr>
+<tr><td>legacy</td><td>16</td><td>16.4</td><td>17.8</td><td>19.2</td></tr>
+<tr><td>recheck</td><td>2</td><td>15.2</td><td>16.9</td><td>18.5</td></tr>
+<tr><td>recheck</td><td>4</td><td>16.9</td><td>17.3</td><td>18.5</td></tr>
+<tr><td>recheck</td><td>8</td><td>15.9</td><td>19.4</td><td>20.8</td></tr>
+<tr><td>recheck</td><td>16</td><td>13.9</td><td>17.3</td><td>17.3</td></tr>
+<tr><td>occ</td><td>2</td><td>22.6</td><td>22.9</td><td>25.5</td></tr>
+<tr><td>occ</td><td>4</td><td>19.9</td><td>23.0</td><td>20.8</td></tr>
+<tr><td>occ</td><td>8</td><td>17.2</td><td>23.9</td><td>25.1</td></tr>
+<tr><td>occ</td><td>16</td><td>20.0</td><td>21.6</td><td>23.6</td></tr>
+<tr><td>lease</td><td>2</td><td>67.8</td><td>234.7</td><td>928.9</td></tr>
+<tr><td>lease</td><td>4</td><td>112.9</td><td>604.0</td><td>2683.7</td></tr>
+<tr><td>lease</td><td>8</td><td>348.2</td><td>1471.8</td><td>4023.7</td></tr>
+<tr><td>lease</td><td>16</td><td>538.6</td><td>3154.1</td><td>4026.9</td></tr>
+</table>
+<h2>Table 4 - mean screen reads per agent</h2>
+<p>The retry bill. Every read is another frame through the vision model.</p>
+<table>
+<tr><th>mode</th><th>concurrency</th><th>50 ms</th><th>200 ms</th><th>800 ms</th></tr>
+<tr><td>legacy</td><td>2</td><td>1.0</td><td>1.0</td><td>1.0</td></tr>
+<tr><td>legacy</td><td>4</td><td>1.0</td><td>1.0</td><td>1.0</td></tr>
+<tr><td>legacy</td><td>8</td><td>1.0</td><td>1.0</td><td>1.0</td></tr>
+<tr><td>legacy</td><td>16</td><td>1.0</td><td>1.0</td><td>1.0</td></tr>
+<tr><td>recheck</td><td>2</td><td>1.0</td><td>1.0</td><td>1.0</td></tr>
+<tr><td>recheck</td><td>4</td><td>1.0</td><td>1.0</td><td>1.0</td></tr>
+<tr><td>recheck</td><td>8</td><td>1.0</td><td>1.0</td><td>1.0</td></tr>
+<tr><td>recheck</td><td>16</td><td>1.0</td><td>1.0</td><td>1.0</td></tr>
+<tr><td>occ</td><td>2</td><td>1.42</td><td>1.5</td><td>1.5</td></tr>
+<tr><td>occ</td><td>4</td><td>1.21</td><td>1.75</td><td>1.75</td></tr>
+<tr><td>occ</td><td>8</td><td>1.08</td><td>1.42</td><td>1.88</td></tr>
+<tr><td>occ</td><td>16</td><td>1.05</td><td>1.24</td><td>1.9</td></tr>
+<tr><td>lease</td><td>2</td><td>1.0</td><td>1.0</td><td>1.0</td></tr>
+<tr><td>lease</td><td>4</td><td>1.0</td><td>1.0</td><td>1.0</td></tr>
+<tr><td>lease</td><td>8</td><td>1.0</td><td>1.0</td><td>0.73</td></tr>
+<tr><td>lease</td><td>16</td><td>1.0</td><td>1.0</td><td>0.39</td></tr>
+</table>
+<h2>Table 5 - lost acknowledged intents, % of trials</h2>
+<p>15 trials per cell, contending writer acting 100 ms after the agent starts reading. The agent was told its edit succeeded and it did not survive.</p>
+<table>
+<tr><th>scenario</th><th>mode</th><th>25 ms</th><th>100 ms</th><th>400 ms</th></tr>
+<tr><td>modify_vs_modify</td><td>legacy</td><td>0.0</td><td>53.3</td><td>100.0</td></tr>
+<tr><td>modify_vs_modify</td><td>recheck</td><td>0.0</td><td>26.7</td><td>100.0</td></tr>
+<tr><td>modify_vs_modify</td><td>occ</td><td>0.0</td><td>0.0</td><td>0.0</td></tr>
+<tr><td>modify_vs_modify</td><td>lease</td><td>0.0</td><td>0.0</td><td>0.0</td></tr>
+<tr><td>cancel_vs_modify</td><td>legacy</td><td>0.0</td><td>53.3</td><td>86.7</td></tr>
+<tr><td>cancel_vs_modify</td><td>recheck</td><td>0.0</td><td>66.7</td><td>93.3</td></tr>
+<tr><td>cancel_vs_modify</td><td>occ</td><td>0.0</td><td>0.0</td><td>0.0</td></tr>
+<tr><td>cancel_vs_modify</td><td>lease</td><td>0.0</td><td>0.0</td><td>0.0</td></tr>
+<tr><td>stale_read_overwrite</td><td>legacy</td><td>0.0</td><td>40.0</td><td>100.0</td></tr>
+<tr><td>stale_read_overwrite</td><td>recheck</td><td>0.0</td><td>26.7</td><td>100.0</td></tr>
+<tr><td>stale_read_overwrite</td><td>occ</td><td>0.0</td><td>0.0</td><td>0.0</td></tr>
+<tr><td>stale_read_overwrite</td><td>lease</td><td>0.0</td><td>0.0</td><td>0.0</td></tr>
+</table>
+<h2>Table 6 - p99 overhead per agent in the anomaly scenarios, ms</h2>
+<table>
+<tr><th>scenario</th><th>mode</th><th>25 ms</th><th>100 ms</th><th>400 ms</th></tr>
+<tr><td>modify_vs_modify</td><td>legacy</td><td>12.3</td><td>9.5</td><td>8.7</td></tr>
+<tr><td>modify_vs_modify</td><td>recheck</td><td>7.8</td><td>8.0</td><td>8.2</td></tr>
+<tr><td>modify_vs_modify</td><td>occ</td><td>8.5</td><td>15.9</td><td>16.0</td></tr>
+<tr><td>modify_vs_modify</td><td>lease</td><td>11.3</td><td>60.7</td><td>431.9</td></tr>
+<tr><td>cancel_vs_modify</td><td>legacy</td><td>14.6</td><td>16.7</td><td>19.7</td></tr>
+<tr><td>cancel_vs_modify</td><td>recheck</td><td>14.0</td><td>20.9</td><td>18.6</td></tr>
+<tr><td>cancel_vs_modify</td><td>occ</td><td>15.4</td><td>22.4</td><td>15.3</td></tr>
+<tr><td>cancel_vs_modify</td><td>lease</td><td>9.7</td><td>47.3</td><td>450.9</td></tr>
+<tr><td>stale_read_overwrite</td><td>legacy</td><td>8.0</td><td>11.8</td><td>15.2</td></tr>
+<tr><td>stale_read_overwrite</td><td>recheck</td><td>7.5</td><td>7.6</td><td>16.4</td></tr>
+<tr><td>stale_read_overwrite</td><td>occ</td><td>13.7</td><td>13.0</td><td>32.2</td></tr>
+<tr><td>stale_read_overwrite</td><td>lease</td><td>20.2</td><td>58.8</td><td>419.6</td></tr>
+</table>
+<h2>Table 7 - lease TTL against an 800 ms think time</h2>
+<p>4 agents, 4 trials per row. A TTL shorter than the think time fences every agent and completes nothing.</p>
+<table>
+<tr><th>lease TTL ms</th><th>double-bookings</th><th>booked</th><th>fenced</th><th>gave up waiting</th></tr>
+<tr><td>100</td><td>0</td><td>0</td><td>16</td><td>0</td></tr>
+<tr><td>400</td><td>0</td><td>0</td><td>16</td><td>0</td></tr>
+<tr><td>1600</td><td>0</td><td>4</td><td>0</td><td>0</td></tr>
+<tr><td>5000</td><td>0</td><td>4</td><td>0</td><td>0</td></tr>
+</table>
+<h2>Table 8 - where the lease queue breaks down (800 ms think)</h2>
+<table>
+<tr><th>concurrency</th><th>booked</th><th>declined, room already taken</th><th>gave up waiting</th><th>p99 overhead ms</th></tr>
+<tr><td>2</td><td>6</td><td>6</td><td>0</td><td>928.9</td></tr>
+<tr><td>4</td><td>6</td><td>18</td><td>0</td><td>2683.7</td></tr>
+<tr><td>8</td><td>6</td><td>29</td><td>13</td><td>4023.7</td></tr>
+<tr><td>16</td><td>6</td><td>31</td><td>59</td><td>4026.9</td></tr>
+</table>
+<h2>Totals</h2>
+<table>
+<tr><th></th><th>legacy</th><th>recheck</th><th>occ</th><th>lease</th></tr>
+<tr><td>double-bookings, whole sweep</td><td>229</td><td>0</td><td>0</td><td>0</td></tr>
+<tr><td>agent bookings driven</td><td>540</td><td>540</td><td>540</td><td>540</td></tr>
+<tr><td>lost acknowledged intents, whole anomaly suite (out of 135 trials)</td><td>65</td><td>62</td><td>0</td><td>0</td></tr>
+</table>
+<p>Run started 2026-08-14T14:14:16, anomaly suite 2026-08-14T14:20:26.</p>
+<h2>Losing axes</h2>
+<p>- **Optimistic concurrency costs a second screen read.** Under the worst cell</p>
+<p>  measured (16 agents, 800 ms think) agents averaged 1.90 reads per booking</p>
+<p>  against 1.00 for the unsafe path. For a vision agent, a screen read is not</p>
+<p>  free: it is another full frame through the model. The 6 ms of p99 server</p>
+<p>  overhead is the cheap half of the bill; the expensive half is the re-read.</p>
+<p>- **Leases cost queueing latency, linearly in fleet size.** The lease serializes</p>
+<p>  the whole read-decide-write window, so p99 overhead is roughly</p>
+<p>  `concurrency x think_ms`. At 16 agents and 800 ms think it hit 4.0 s, and</p>
+<p>  agents began abandoning the queue.</p>
+<p>- **A lease TTL shorter than the agent's think time trades one defect for</p>
+<p>  another.** At 800 ms think with a 100 ms or 400 ms TTL, every agent was fenced</p>
+<p>  and no booking completed at all. The TTL has to upper-bound the tail of the</p>
+<p>  vision model's latency distribution, which means you need that distribution</p>
+<p>  before you can pick the TTL.</p>
+<p>- **`recheck` is free and fixes exactly one of the four failure modes.** It is</p>
+<p>  the right first move and it is not sufficient.</p>
+<h2>Honest notes</h2>
+<p>- Trial counts are small (6 per sweep cell, 15 per anomaly cell). These are</p>
+<p>  effect sizes of 0% vs 100%, not 3% vs 4%, so the counts are adequate for the</p>
+<p>  claim being made and inadequate for anything finer.</p>
+<p>- All latency is loopback HTTP to a local SQLite file on an Apple M-series</p>
+<p>  laptop. The absolute milliseconds mean nothing off this machine; the ratios</p>
+<p>  between modes are the point.</p>
+<p>- `mean_reads_per_agent` below 1.0 in lease mode means some agents gave up</p>
+<p>  waiting for the lease before reading anything.</p>
