@@ -88,6 +88,53 @@ curl 'http://127.0.0.1:8799/screen/room?room=101&night=2026-08-20'
 | `report.py` | merges the two result files into `../RESULTS.md` and `report.html`. |
 | `results.*.json` | raw output of the run that produced `../RESULTS.md`. |
 
+## The race the harness measures
+
+```mermaid
+sequenceDiagram
+  participant A as agent A
+  participant S as mock PMS
+  participant B as agent B
+  A->>S: GET booking screen
+  S-->>A: room-night looks free
+  Note over A: think_ms<br/>this is the vision model deciding
+  B->>S: GET booking screen
+  S-->>B: room-night looks free
+  B->>S: POST booking form
+  S-->>B: 200 confirmed
+  A->>S: POST booking form
+  S-->>A: 200 confirmed
+  Note over S: two active reservations<br/>on one room-night
+```
+
+Everything between agent A's GET and its POST is somebody else's turn, and
+`think_ms` is exactly how long that window stays open.
+
+## The four write-path modes
+
+```mermaid
+flowchart TD
+  POST["POST booking form"] --> MODE{"server mode"}
+  MODE -->|"legacy"| L["write, no re-check<br/>the screen already answered"]
+  MODE -->|"recheck"| RC["re-check availability inside<br/>one IMMEDIATE transaction"]
+  MODE -->|"occ"| OCC{"version token from<br/>the screen still current?"}
+  MODE -->|"lease"| LS["booking-intent lease<br/>with TTL and epoch"]
+  OCC -->|"yes"| W["write"]
+  OCC -->|"no"| C409["409, agent re-reads"]
+  L --> INV["harness checks two invariants"]
+  RC --> INV
+  W --> INV
+  LS --> INV
+  INV --> I1["NO_DOUBLE_BOOK"]
+  INV --> I2["ACKED_INTENT_DURABILITY<br/>every acknowledged edit survives"]
+
+  style I2 fill:#1f6feb,color:#fff
+```
+
+`recheck` is the trap: it drives double-bookings to zero and still loses 62 of 135
+acknowledged edits, because a legacy screen posts the whole record back and
+silently overwrites fields the agent never meant to touch.
+
 ## The four failure modes
 
 | scenario | the race |
