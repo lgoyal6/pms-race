@@ -1,5 +1,5 @@
 #!/bin/sh
-# Full reproduce: starts the mock PMS, runs both stages, writes ../RESULTS.md.
+# Full reproduce: starts the mock PMS, runs both stages, writes RESULTS.md.
 # Stdlib python3 only. No network, no dependencies. About 9 minutes.
 # TRIALS / ATRIALS can be lowered for a fast smoke run.
 set -e
@@ -15,6 +15,6 @@ sleep 1
 
 python3 harness.py --stage sweep     --trials "$TRIALS"          --out results.sweep.json
 python3 harness.py --stage anomalies --anomaly-trials "$ATRIALS" --out results.anomalies.json
-python3 report.py ../RESULTS.md
+python3 report.py RESULTS.md
 
-echo "done: ../RESULTS.md and pms-race/report.html"
+echo "done: RESULTS.md and report.html"

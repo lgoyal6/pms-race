@@ -6,14 +6,14 @@ import sys
 
 HEADER = """# RESULTS - concurrency correctness for computer-use agents on a legacy PMS
 
-All numbers below were produced on this machine by the harness in `pms-race/`.
+All numbers below were produced on this machine by the harness in this repo.
 Nothing here is a measurement of, or a claim about, any real product. The system
-under test is `pms-race/server.py`, a mock property management system I wrote.
+under test is `server.py`, a mock property management system I wrote.
 
 **Regenerate everything (about 9 minutes):**
 
 ```
-cd pms-race && ./run.sh
+./run.sh
 ```
 
 ## What is being measured

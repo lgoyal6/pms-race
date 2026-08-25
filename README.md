@@ -58,7 +58,7 @@ nothing about that is public.
 ## Run it
 
 ```
-./run.sh                     # about 9 minutes, writes ../RESULTS.md + report.html
+./run.sh                     # about 9 minutes, writes RESULTS.md + report.html
 ```
 
 or piecewise:
@@ -67,7 +67,7 @@ or piecewise:
 python3 server.py 8799 &
 python3 harness.py --stage sweep     --trials 6          --out results.sweep.json
 python3 harness.py --stage anomalies --anomaly-trials 15 --out results.anomalies.json
-python3 report.py ../RESULTS.md
+python3 report.py RESULTS.md
 ```
 
 Stdlib Python 3 only. No dependencies, no network, no downloads. Verified on
@@ -85,8 +85,8 @@ curl 'http://127.0.0.1:8799/screen/room?room=101&night=2026-08-20'
 |---|---|
 | `server.py` | the mock PMS. SQLite store, HTML form screens, four write paths (`legacy`, `recheck`, `occ`, `lease`), and an acknowledgement ledger. |
 | `harness.py` | the agents and the scenarios. Agents scrape the HTML screen with a regex, sleep for `think_ms`, then POST the form back. |
-| `report.py` | merges the two result files into `../RESULTS.md` and `report.html`. |
-| `results.*.json` | raw output of the run that produced `../RESULTS.md`. |
+| `report.py` | merges the two result files into `RESULTS.md` and `report.html`. |
+| `results.*.json` | raw output of the run that produced `RESULTS.md`. |
 
 ## The race the harness measures
 
