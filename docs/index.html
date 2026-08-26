@@ -1,0 +1,198 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>pms-race - what happens between the read and the click</title>
+<meta name="description" content="A computer-use agent driving a booking screen has no transaction. Sixteen agents, one room: the legacy path books it 93 times. The obvious fix removes that entirely and does nothing for lost updates.">
+<meta property="og:title" content="pms-race">
+<meta property="og:description" content="Between reading availability and clicking book, the world changes. Four failure modes measured, two mitigations priced.">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="gut">
+  <div>
+    <div class="eyebrow">lgoyal6 / pms-race</div>
+    <h1>pms&#8209;race<span class="dot">.</span></h1>
+    <p class="thesis">
+      A computer-use agent driving a screen has no transaction. It reads what is
+      available, spends a second deciding, then clicks. Between the read and the click
+      another agent, the front desk, or an OTA can take the room.
+    </p>
+    <p class="thesis">
+      <strong>The longer the agent thinks, the more often it is wrong.</strong> This is a
+      mock property management system with a real database behind it, driven by N agents
+      at once with a measured pause between reading and writing.
+    </p>
+  </div>
+  <dl class="facts">
+    <div class="fact"><dt>16 agents, 6 rooms</dt><dd>93 <small>bookings taken</small></dd></div>
+    <div class="fact"><dt>read it again first</dt><dd>6 <small>correct, and free</small></dd></div>
+    <div class="fact"><dt>same fix, lost updates</dt><dd>0% <small>of them prevented</small></dd></div>
+    <div class="fact"><dt>locking instead</dt><dd>4.0s <small>p95, 61% turned away</small></dd></div>
+  </dl>
+</header>
+
+<section class="gut">
+  <div class="eyebrow">Figure 1</div>
+  <h2>The gap between looking and clicking</h2>
+  <p class="lead">
+    Every agent reads availability, waits, then books. The wait is the whole
+    experiment: it is how long a model spends deciding, and it is the window in which
+    someone else takes the room.
+  </p>
+
+  <div class="figure">
+    <div class="figcap">
+      <span id="cap-what">Loading</span>
+      <span id="cap-where">a mock PMS over SQLite, all local</span>
+    </div>
+    <div class="toolbar">
+      <span class="picklabel">Booking path</span>
+      <div class="pick" id="modes" role="group" aria-label="Booking path"></div>
+      <div class="scrub">
+        <span class="picklabel">Thinking time</span>
+        <input type="range" id="think" min="0" max="2" value="2" step="1">
+      </div>
+    </div>
+    <canvas class="plot" id="plot-race" width="1200" height="380"></canvas>
+    <dl class="readout">
+      <div><dt>agents at once</dt><dd id="r-conc">-</dd></div>
+      <div><dt>double bookings</dt><dd id="r-double">-</dd></div>
+      <div><dt>what happened</dt><dd id="r-outcomes" class="small">-</dd></div>
+      <div><dt>added latency, p95</dt><dd id="r-p95">-</dd></div>
+    </dl>
+    <div class="banner" id="race-banner">Loading.</div>
+  </div>
+
+  <div class="split">
+    <div>
+      <h3>Why more agents is not the problem</h3>
+      <p>
+        Thinking time is. At a 50ms pause the legacy path double-books
+        <strong>2.1 times per 100 agents</strong> with sixteen running at once. Hold the
+        pause at 800ms, the sort of gap a model actually takes, and the same sixteen
+        agents produce <strong>90.6</strong>.
+      </p>
+      <p>
+        More agents with a short pause is mostly a queue: the first one wins and the rest
+        genuinely see the room as taken. The defect needs a window, and the window is the
+        agent thinking.
+      </p>
+    </div>
+    <dl class="takeaway">
+      <dt>the variable that matters</dt>
+      <dd>How long the agent thinks.<small>2.1 to 90.6 per 100 agents, same concurrency.</small></dd>
+      <dt>the fix</dt>
+      <dd>Re-read inside the write.<small>Zero double bookings, no measurable latency.</small></dd>
+      <dt>what it does not fix</dt>
+      <dd>Anything below.<small>Lost updates are untouched by it.</small></dd>
+    </dl>
+  </div>
+</section>
+
+<section class="gut">
+  <div class="eyebrow">Figure 2</div>
+  <h2>The fix that works, and the failure it does nothing for</h2>
+  <p class="lead">
+    Three more ways two agents collide, where nothing is double-booked and an edit is
+    silently thrown away instead. The same mitigations, measured again.
+  </p>
+
+  <div class="figure">
+    <div class="figcap">
+      <span>edits lost, per 100 trials</span>
+      <span id="cap-think2"></span>
+    </div>
+    <div class="toolbar">
+      <span class="picklabel">Thinking time</span>
+      <div class="pick" id="think2" role="group" aria-label="Thinking time"></div>
+    </div>
+    <canvas class="plot" id="plot-lost" width="1200" height="330"></canvas>
+    <div class="banner" id="lost-banner">Loading.</div>
+  </div>
+
+  <div class="split">
+    <div>
+      <p>
+        <strong>Re-reading before the write is exactly as good as doing nothing here.</strong>
+        In all three scenarios it leaves the loss rate where it was, because the check it
+        performs is "is the room still free", and the room was always free. The edit is
+        lost to the write that follows it, not to the row being taken.
+      </p>
+      <p>
+        <strong>Only comparing against the version you read fixes it</strong>, at a cost of
+        about 1.5 write attempts per agent and roughly ten extra milliseconds. Locking also
+        fixes it, at twenty to a hundred times that.
+      </p>
+    </div>
+    <dl class="takeaway">
+      <dt>looks like a fix</dt>
+      <dd>Re-read before writing.<small>Loss rate unchanged, all three scenarios.</small></dd>
+      <dt>is a fix</dt>
+      <dd>Compare-and-set on the version.<small>Zero lost, 1.5 attempts, about 10ms.</small></dd>
+      <dt>also a fix, at a price</dt>
+      <dd>Take a lease first.<small>Zero lost, and 20 to 100x the latency.</small></dd>
+    </dl>
+  </div>
+</section>
+
+<section class="gut">
+  <div class="eyebrow">Figure 3</div>
+  <h2>The scoreboard</h2>
+  <p class="lead">
+    Sixteen agents, 800ms of thinking, six rooms actually available. What each path did
+    with 96 attempts.
+  </p>
+  <div class="figure">
+    <div class="grid-wrap"><table class="data" id="board"></table></div>
+    <div class="banner" id="board-banner"></div>
+  </div>
+</section>
+
+<section class="gut">
+  <div class="eyebrow">Figure 4</div>
+  <h2>Where it loses</h2>
+  <ul class="map">
+    <li>
+      <b>This is a mock, not a product.</b> A local SQLite database behind screens written
+      for this harness. Nothing here touches or describes any real property management
+      system, and a real one may already do the right thing.
+      <span class="where">server.py</span>
+    </li>
+    <li>
+      <b>The pause is injected, not observed.</b> Thinking time is a parameter here rather
+      than a measurement of any particular model, so the shape of the curve is the result
+      and the position along it is a setting.
+      <span class="where">harness.py</span>
+    </li>
+    <li>
+      <b>Everything runs on one machine.</b> No network partition, no clock skew, no retry
+      storm from a load balancer. The failure modes that need a real distributed system are
+      not in here.
+      <span class="where">run.sh</span>
+    </li>
+    <li>
+      <b>Six trials a cell, twelve for the anomalies.</b> Enough to separate 0 from 90 and
+      not enough to argue about a few points. The cell counts are in the run config.
+      <span class="where">results.sweep.json</span>
+    </li>
+  </ul>
+</section>
+
+<footer class="gut">
+  <span>
+    <a href="https://github.com/lgoyal6/pms-race">github.com/lgoyal6/pms-race</a>
+    &middot; MIT
+  </span>
+  <span>
+    also: <a href="https://lgoyal6.github.io/strata/">strata</a>
+    &middot; <a href="https://lgoyal6.github.io/tickvault/">tickvault</a>
+    &middot; <a href="https://lgoyal6.github.io/flightrisk/">flightrisk</a>
+  </span>
+</footer>
+
+<script src="app.js"></script>
+</body>
+</html>
