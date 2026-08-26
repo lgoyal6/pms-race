@@ -11,7 +11,22 @@
 </head>
 <body>
 
-<header class="gut">
+<nav class="topbar">
+  <a class="brand" href="https://lakshgoyal.com">Laksh Goyal<span>.</span></a>
+  <div class="navlinks">
+    <a href="https://github.com/lgoyal6/pms-race">GitHub</a>
+    <a href="https://www.linkedin.com/in/lakshgoyal">LinkedIn</a>
+  </div>
+</nav>
+<nav class="tabs" aria-label="Sections">
+    <a href="#sec-home">Home</a>
+    <a href="#sec-race">The race</a>
+    <a href="#sec-lost">Lost updates</a>
+    <a href="#sec-board">Scoreboard</a>
+    <a href="#sec-limits">Limits</a>
+</nav>
+
+<header id="sec-home" class="gut">
   <div>
     <div class="eyebrow">lgoyal6 / pms-race</div>
     <h1>pms&#8209;race<span class="dot">.</span></h1>
@@ -34,7 +49,7 @@
   </dl>
 </header>
 
-<section class="gut">
+<section class="gut" id="sec-race">
   <div class="eyebrow">Figure 1</div>
   <h2>The gap between looking and clicking</h2>
   <p class="lead">
@@ -92,7 +107,7 @@
   </div>
 </section>
 
-<section class="gut">
+<section class="gut" id="sec-lost">
   <div class="eyebrow">Figure 2</div>
   <h2>The fix that works, and the failure it does nothing for</h2>
   <p class="lead">
@@ -138,7 +153,7 @@
   </div>
 </section>
 
-<section class="gut">
+<section class="gut" id="sec-board">
   <div class="eyebrow">Figure 3</div>
   <h2>The scoreboard</h2>
   <p class="lead">
@@ -151,7 +166,7 @@
   </div>
 </section>
 
-<section class="gut">
+<section class="gut" id="sec-limits">
   <div class="eyebrow">Figure 4</div>
   <h2>Where it loses</h2>
   <ul class="map">
@@ -194,5 +209,6 @@
 </footer>
 
 <script src="app.js"></script>
+<script src="nav.js"></script>
 </body>
 </html>
