@@ -11,6 +11,9 @@ then implements two mitigations and measures what they cost.
 
 Nothing here touches or describes any real product. Everything is local.
 
+**[See it: lgoyal6.github.io/pms-race](https://lgoyal6.github.io/pms-race/)** - the booking
+race against thinking time, and what each mitigation costs.
+
 ---
 
 ## The short version
