@@ -207,3 +207,8 @@ html { scroll-padding-top: 96px; }
   background: transparent; color: var(--ox); transition: background .18s ease, color .18s ease; }
 .toolbar .btn:hover:not(:disabled) { background: var(--ox); color: var(--paper); }
 .toolbar .btn:disabled { opacity: .45; cursor: not-allowed; }
+
+/* Brand marks in the nav, sized to the text and inheriting its colour. */
+.navlinks a { display: inline-flex; align-items: center; gap: 7px; }
+.navlinks svg { width: 15px; height: 15px; flex: 0 0 auto; }
+.brand { letter-spacing: .005em; }
