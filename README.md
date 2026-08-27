@@ -1,3 +1,10 @@
+<a href="https://lgoyal6.github.io/pms-race/">
+  <img alt="pms-race - open the live demo" src="docs/og.png">
+</a>
+
+**[Open the live demo](https://lgoyal6.github.io/pms-race/)** - The booking
+race against thinking time, and what each mitigation costs.
+
 # pms-race - a concurrency harness for computer-use agents on a legacy PMS
 
 A computer-use agent driving a screen has no transaction. It reads availability,
@@ -10,9 +17,6 @@ injected delay between the read and the write. It measures four failure modes,
 then implements two mitigations and measures what they cost.
 
 Nothing here touches or describes any real product. Everything is local.
-
-**[See it: lgoyal6.github.io/pms-race](https://lgoyal6.github.io/pms-race/)** - the booking
-race against thinking time, and what each mitigation costs.
 
 ---
 
