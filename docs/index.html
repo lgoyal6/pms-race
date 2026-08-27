@@ -76,8 +76,11 @@
         <span class="picklabel">Thinking <b id="try-think-val">400ms</b></span>
         <input type="range" id="try-think" min="0" max="1200" value="400" step="100" aria-label="thinking time">
       </div>
-      <button class="btn" id="try-go" disabled>Run the race</button>
+      <button class="btn" id="try-go" disabled>Start the agents &rarr;</button>
     </div>
+    <p class="race-hint" id="try-hint">Each agent does the same three things: reads the room as
+      free, waits the thinking time, then tries to book it. They all read before any of them
+      writes, which is what makes it a race. Watch the bar fill, then read the verdict.</p>
 
     <div class="try-agents" id="try-agents"></div>
 

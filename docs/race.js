@@ -48,6 +48,8 @@
     el('try-go').disabled = true;
 
     st.api.reset(st.mode);
+    el('try-hint').textContent =
+      'Reading the screen. Every agent sees the room as free before any of them books.';
     const rows = Array.from({ length: st.n }, () => ({ text: 'reading the screen', pct: 6 }));
     drawAgents(rows);
 
@@ -88,6 +90,9 @@
       }),
     );
 
+    el('try-hint').textContent =
+      'All ' + st.n + ' read the room as free, then wrote one after another. What they were ' +
+      'told is on the right.';
     const booked = rows.filter((r) => r.booked).length;
     const active = st.api.active();
     const dupes = Math.max(active - 1, 0);
