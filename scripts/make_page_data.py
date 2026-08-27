@@ -46,7 +46,12 @@ def main() -> None:
         # How long a lease may be held, which is the one knob a lease has.
         "lease_ttl": trim(sweep.get("lease_ttl", [])),
     }
+    # The page runs the booking paths itself, in pyodide, so a reader can
+    # cause a race rather than read about one. server.py is copied verbatim:
+    # the same do_book the harness drives over HTTP.
     OUT.mkdir(parents=True, exist_ok=True)
+    (OUT / "server.py").write_text((ROOT / "server.py").read_text())
+
     path = OUT / "runs.json"
     path.write_text(json.dumps(payload, separators=(",", ":")) + "\n")
     print(f"{path.relative_to(ROOT)}  {path.stat().st_size / 1024:.1f} kB")

@@ -20,7 +20,8 @@
 </nav>
 <nav class="tabs" aria-label="Sections">
     <a href="#sec-home">Home</a>
-    <a href="#sec-race">The race</a>
+    <a href="#sec-try">Try it</a>
+    <a href="#sec-race">Measured</a>
     <a href="#sec-lost">Lost updates</a>
     <a href="#sec-board">Scoreboard</a>
     <a href="#sec-limits">Limits</a>
@@ -48,6 +49,72 @@
     <div class="fact"><dt>locking instead</dt><dd>4.0s <small>p95, 61% turned away</small></dd></div>
   </dl>
 </header>
+
+<section id="sec-try" class="gut">
+  <div class="eyebrow">Try it</div>
+  <h2>Cause a double booking yourself</h2>
+  <p class="lead">
+    One room, one night, and however many agents you point at it. Each one reads the screen,
+    waits, then books, exactly as <code>server.py</code> does it, running here against a real
+    SQLite database in your tab. Press it twice and you will not always get the same answer,
+    because the race is real.
+  </p>
+
+  <div class="figure">
+    <div class="figcap">
+      <span id="try-engine">starting the engine</span>
+      <span id="try-note">server.py, unmodified, on sqlite in your browser</span>
+    </div>
+    <div class="toolbar">
+      <span class="picklabel">Booking path</span>
+      <div class="pick" id="try-mode" role="group" aria-label="Booking path"></div>
+      <div class="scrub">
+        <span class="picklabel">Agents <b id="try-n-val">4</b></span>
+        <input type="range" id="try-n" min="2" max="12" value="4" step="1" aria-label="agents">
+      </div>
+      <div class="scrub">
+        <span class="picklabel">Thinking <b id="try-think-val">400ms</b></span>
+        <input type="range" id="try-think" min="0" max="1200" value="400" step="100" aria-label="thinking time">
+      </div>
+      <button class="btn" id="try-go" disabled>Run the race</button>
+    </div>
+
+    <div class="try-agents" id="try-agents"></div>
+
+    <dl class="readout">
+      <div><dt>rooms available</dt><dd>1</dd></div>
+      <div><dt>agents booked</dt><dd id="try-booked">&ndash;</dd></div>
+      <div><dt>turned away</dt><dd id="try-declined">&ndash;</dd></div>
+      <div><dt>double bookings</dt><dd id="try-dupes">&ndash;</dd></div>
+    </dl>
+    <div class="banner" id="try-banner">Pick a path and run it.</div>
+  </div>
+
+  <div class="split">
+    <div>
+      <h3>What to try</h3>
+      <p>
+        <strong>Legacy with the thinking time up.</strong> Every agent reads a free room,
+        every agent waits, every agent books, and the room is sold as many times as there
+        were agents. Drag thinking to zero and the damage mostly goes away, which is the
+        whole point: the defect needs a window, and the window is the agent thinking.
+      </p>
+      <p>
+        <strong>Then switch to re-read and run the same thing.</strong> Same agents, same
+        delay, one room sold once. The others are turned away by the check inside the write,
+        which is four lines of SQL in <code>do_book</code>.
+      </p>
+    </div>
+    <dl class="takeaway">
+      <dt>the same code</dt>
+      <dd>server.py, unmodified.<small>The function the harness drives over HTTP.</small></dd>
+      <dt>the same database</dt>
+      <dd>Real SQLite, in your tab.<small>Same schema, no unique index, on purpose.</small></dd>
+      <dt>not a replay</dt>
+      <dd>Your race, each time.<small>Run it twice and compare.</small></dd>
+    </dl>
+  </div>
+</section>
 
 <section class="gut" id="sec-race">
   <div class="eyebrow">Figure 1</div>
@@ -208,7 +275,9 @@
   </span>
 </footer>
 
+<script src="https://cdn.jsdelivr.net/pyodide/v0.26.4/full/pyodide.js"></script>
 <script src="app.js"></script>
+<script src="race.js"></script>
 <script src="nav.js"></script>
 </body>
 </html>

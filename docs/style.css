@@ -1,18 +1,25 @@
+/* pms-race reads as a terminal, because that is what it is: agents racing a
+   store while you watch. Dark ground, IBM Plex, and the project's sienna
+   pushed up to something that survives on it. The variable names are the same
+   ones the charts read, so the canvases follow the palette. */
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap');
+
 :root {
-  --paper: #fbfaf7;
-  --panel: #f5f3ec;
-  --ink: #17150f;
-  --sub: #57513f;
-  --faint: #8f8977;
-  --rule: #17150f;
-  --hair: #d9d3c4;
-  --ox: #8c3f23;      /* burnt sienna: this project's ink */
-  --ox-dim: #c08a70;
-  --ok: #2f5d3a;
-  --warn: #8a6d1f;
-  --bad: #a33d2e;
-  --serif: 'Times New Roman', Times, Georgia, serif;
-  --mono: 'Courier New', Courier, monospace;
+  --paper: #12100f;
+  --panel: #191614;
+  --ink: #ece7e3;
+  --sub: #a09890;
+  --faint: #71685f;
+  --rule: #2b2521;
+  --hair: #2b2521;
+  --grid: #241f1c;
+  --ox: #e08256;      /* sienna, lifted for a dark ground */
+  --ox-dim: #7a4429;
+  --ok: #6fbf8a;
+  --warn: #d9ab5e;
+  --bad: #e06a55;
+  --serif: 'IBM Plex Sans', system-ui, sans-serif;
+  --mono: 'IBM Plex Mono', ui-monospace, monospace;
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -104,8 +111,8 @@ code { font: .9em var(--mono); background: var(--panel); padding: 1px 4px; }
 .readout dd small { font-size: 12px; color: var(--sub); }
 
 .banner { padding: 9px 14px; border-top: 1px solid var(--hair); font: 12px/1.5 var(--mono); color: var(--sub); }
-.banner.alarm { background: #f7e7e4; color: var(--bad); }
-.banner.calm { background: #e9efe8; color: var(--ok); }
+.banner.alarm { background: rgba(224,106,85,.10); color: var(--bad); }
+.banner.calm { background: rgba(111,191,138,.10); color: var(--ok); }
 
 table.data { border-collapse: collapse; font: 13px/1.4 var(--mono); margin-top: 14px; width: 100%; }
 table.data th, table.data td { border-bottom: 1px solid var(--hair); padding: 5px 10px 5px 0; text-align: right; }
@@ -177,3 +184,26 @@ html { scroll-padding-top: 96px; }
   html { scroll-behavior: auto; }
   .tabs a, .navlinks a { transition: none; }
 }
+
+/* The agents, one row each, so an interleaving is something you watch. */
+.try-agents { border-top: 1px solid var(--hair); display: grid; }
+.agent {
+  display: grid; grid-template-columns: 92px 1fr 132px; gap: 12px; align-items: center;
+  padding: 8px 16px; border-bottom: 1px solid var(--hair); font: 13px/1.5 var(--mono);
+}
+.agent:last-child { border-bottom: 0; }
+.agent .who { color: var(--sub); }
+.agent .bar { height: 8px; background: var(--grid); position: relative; overflow: hidden; }
+.agent .bar i { position: absolute; inset: 0 100% 0 0; background: var(--ox-dim); transition: right .12s linear; }
+.agent .verdict { text-align: right; color: var(--faint); }
+.agent.booked .verdict { color: var(--ok); }
+.agent.declined .verdict { color: var(--sub); }
+.agent.dupe .verdict { color: var(--bad); }
+.agent.dupe .bar i { background: var(--bad); }
+.readout dd.bad { color: var(--bad); }
+.readout dd.good { color: var(--ok); }
+.toolbar .btn { font: 12px/1 var(--mono); letter-spacing: .06em; text-transform: uppercase;
+  padding: 12px 16px; min-height: 44px; cursor: pointer; border: 1px solid var(--ox);
+  background: transparent; color: var(--ox); transition: background .18s ease, color .18s ease; }
+.toolbar .btn:hover:not(:disabled) { background: var(--ox); color: var(--paper); }
+.toolbar .btn:disabled { opacity: .45; cursor: not-allowed; }
