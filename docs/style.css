@@ -212,3 +212,6 @@ html { scroll-padding-top: 96px; }
 .navlinks a { display: inline-flex; align-items: center; gap: 7px; }
 .navlinks svg { width: 15px; height: 15px; flex: 0 0 auto; }
 .brand { letter-spacing: .005em; }
+
+.race-hint { font: 12px/1.6 var(--mono); color: var(--faint); padding: 10px 16px;
+  border-top: 1px solid var(--hair); margin: 0; max-width: none; }
