@@ -78,7 +78,7 @@ function drawRace() {
     ctx.fillStyle = css('--faint');
     ctx.fillText(String(v), pad.l - 8, Y(v) + 3);
     if (v > 0) {
-      ctx.strokeStyle = '#e8e3d6';
+      ctx.strokeStyle = css('--grid');
       ctx.beginPath(); ctx.moveTo(pad.l, Y(v)); ctx.lineTo(pad.l + iw, Y(v)); ctx.stroke();
     }
   }
@@ -168,7 +168,7 @@ function drawLost() {
     ctx.fillStyle = css('--faint');
     ctx.fillText(String(v), pad.l - 8, Y(v) + 3);
     if (v > 0) {
-      ctx.strokeStyle = '#e8e3d6';
+      ctx.strokeStyle = css('--grid');
       ctx.beginPath(); ctx.moveTo(pad.l, Y(v)); ctx.lineTo(pad.l + iw, Y(v)); ctx.stroke();
     }
   }
